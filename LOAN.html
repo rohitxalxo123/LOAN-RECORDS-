@@ -1,0 +1,130 @@
+<!-- Paste this code inside a Blogger HTML post (in HTML view mode) --><div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+  <h2 style="text-align:center; color:#333">Loan Record Sheet</h2>
+  <p style="text-align:center; font-size:14px; color:gray">Apne dost ko diya gaya loan track karne ke liye form bhariye</p>  <form id="loanForm">
+    <input type="hidden" id="editIndex" value="-1" />
+    <label for="name">Dost ka Naam:</label>
+    <input type="text" id="name" placeholder="Jaise - Rahul" required style="width:100%;padding:10px;margin:5px 0 15px;border:1px solid #ccc;border-radius:5px;" /><label for="amount">Amount (₹):</label>
+<input type="number" id="amount" placeholder="Jaise - 1000" required style="width:100%;padding:10px;margin:5px 0 15px;border:1px solid #ccc;border-radius:5px;" />
+
+<label for="givenDate">Loan Diya Gaya (Date):</label>
+<input type="date" id="givenDate" required style="width:100%;padding:10px;margin:5px 0 15px;border:1px solid #ccc;border-radius:5px;" />
+
+<label for="returnDate">Wapas Karne ki Date:</label>
+<input type="date" id="returnDate" style="width:100%;padding:10px;margin:5px 0 15px;border:1px solid #ccc;border-radius:5px;" />
+
+<label for="returned">Wapas Kiya?</label>
+<select id="returned" style="width:100%;padding:10px;margin:5px 0 15px;border:1px solid #ccc;border-radius:5px;">
+  <option value="No">Nahi</option>
+  <option value="Yes">Haan</option>
+</select>
+
+<label for="note">Note (optional):</label>
+<input type="text" id="note" placeholder="Jaise - 2 mahine mein wapas karega" style="width:100%;padding:10px;margin:5px 0 20px;border:1px solid #ccc;border-radius:5px;" />
+
+<button type="submit" style="width:100%;padding:12px;background:#4CAF50;color:white;border:none;border-radius:5px;margin-bottom:10px;">Save</button>
+<button type="button" onclick="downloadPDF()" style="width:100%;padding:12px;background:#2196F3;color:white;border:none;border-radius:5px;margin-bottom:10px;">Download PDF</button>
+<button type="button" onclick="clearLoans()" style="width:100%;padding:12px;background:#f44336;color:white;border:none;border-radius:5px;">Clear All Data</button>
+
+  </form>  <table border="1" cellspacing="0" cellpadding="8" style="width:100%;margin-top:20px;border-collapse:collapse;text-align:center;font-size:14px;">
+    <thead style="background:#333;color:white">
+      <tr>
+        <th>#</th>
+        <th>Naam</th>
+        <th>Amount</th>
+        <th>Diya</th>
+        <th>Wapas</th>
+        <th>Kiya?</th>
+        <th>Note</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="loanTable"></tbody>
+  </table>
+</div><script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script>
+  let loanList = JSON.parse(localStorage.getItem('loanData')) || [];
+  const tableBody = document.getElementById('loanTable');
+
+  function renderTable() {
+    tableBody.innerHTML = '';
+    if (loanList.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="8">Abhi tak koi record nahi hai</td></tr>';
+    }
+    loanList.forEach((loan, i) => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${loan.name}</td>
+        <td>₹${loan.amount}</td>
+        <td>${loan.givenDate}</td>
+        <td>${loan.returnDate || '-'}</td>
+        <td>${loan.returned}</td>
+        <td>${loan.note || '-'}</td>
+        <td>
+          <button onclick="editLoan(${i})" style="padding:4px 8px;margin:2px;background:#ffc107;border:none;color:#000;border-radius:3px;">Edit</button>
+        </td>
+      `;
+      tableBody.appendChild(row);
+    });
+  }
+
+  document.getElementById('loanForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const index = parseInt(document.getElementById('editIndex').value);
+    const loan = {
+      name: document.getElementById('name').value.trim(),
+      amount: document.getElementById('amount').value,
+      givenDate: document.getElementById('givenDate').value,
+      returnDate: document.getElementById('returnDate').value,
+      returned: document.getElementById('returned').value,
+      note: document.getElementById('note').value.trim()
+    };
+    if (index >= 0) {
+      loanList[index] = loan;
+    } else {
+      loanList.push(loan);
+    }
+    localStorage.setItem('loanData', JSON.stringify(loanList));
+    document.getElementById('loanForm').reset();
+    document.getElementById('editIndex').value = -1;
+    renderTable();
+  });
+
+  function editLoan(index) {
+    const loan = loanList[index];
+    document.getElementById('name').value = loan.name;
+    document.getElementById('amount').value = loan.amount;
+    document.getElementById('givenDate').value = loan.givenDate;
+    document.getElementById('returnDate').value = loan.returnDate;
+    document.getElementById('returned').value = loan.returned;
+    document.getElementById('note').value = loan.note;
+    document.getElementById('editIndex').value = index;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function downloadPDF() {
+    window.jspdf.jsPDF && (function () {
+      const doc = new window.jspdf.jsPDF();
+      doc.text("Loan Record Sheet", 10, 10);
+      let y = 20;
+      loanList.forEach((loan, i) => {
+        doc.text(
+          `${i + 1}. ${loan.name}, ₹${loan.amount}, Diya: ${loan.givenDate}, Wapas: ${loan.returnDate || '-'}, Kiya?: ${loan.returned}, Note: ${loan.note || '-'}`,
+          10,
+          y
+        );
+        y += 10;
+      });
+      doc.save("loan-record.pdf");
+    })();
+  }
+
+  function clearLoans() {
+    if (confirm('Kya aap sach mein saari data clear karna chahte hain?')) {
+      localStorage.removeItem('loanData');
+      loanList = [];
+      renderTable();
+    }
+  }
+
+  renderTable();
+</script>
